@@ -1,2 +1,2 @@
-# Stoic-ID
-A Simple Chat based Identification system.
+# Stoic-id
+ A simple Chatbubble ID for NDFramework

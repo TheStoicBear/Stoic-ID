@@ -1,35 +1,57 @@
-RegisterCommand("showid", function(source, args, rawCommand)
-    local playerId = source
-    local player = NDCore.getPlayer(playerId)
+local isNDCoreInstalled = GetResourceState("ND_Core") == "started"
 
-    if player then
-        local fullName = player.getData("fullname") or "N/A"
-        local dob = player.getData("dob") or "N/A"
-        local gender = player.getData("gender") or "N/A"
-        local job = player.getData("job") or "N/A"
+if isNDCoreInstalled then
+    RegisterCommand("showid", function(source, args, rawCommand)
+        local playerId = source
+        local player = NDCore.getPlayer(playerId)
+    
+        if player then
+            local fullName = player.getData("firstname") .. " " .. player.getData("lastname")
+            local dob = player.getData("dob")
+            local gender = player.getData("gender")
+            local job = player.getData("job") -- You may need to fetch job data from another table if applicable
+    
+            -- Fetch driver's license data
+            local driversLicense = player.getData("driverslicense")
+    
+            -- Trigger event to display ID
+            TriggerEvent("showid:display", playerId, fullName, dob, gender, job, driversLicense)
+        else
+            print("Player not found.")
+        end
+    end, false)   
+else
+    -- Use the QBCore version
+    RegisterCommand("showid", function(source, args, rawCommand)
+        local playerId = source
+        local player = QBCore.Functions.GetPlayer(playerId)
 
-        print("Player data retrieved - Full Name: " .. fullName .. ", DOB: " .. dob .. ", Gender: " .. gender .. ", Job: " .. job)
+        if player then
+            local fullName = player.PlayerData.metadata["fullname"] or "N/A"
+            local dob = player.PlayerData.metadata["dob"] or "N/A"
+            local gender = player.PlayerData.metadata["gender"] or "N/A"
+            local job = player.PlayerData.job.name or "N/A"
+            local driversLicense = player.PlayerData.metadata["driverslicense"] == 1 and "Yes" or "No" -- Convert to Yes/No format
 
-        TriggerEvent("showid:display", playerId, fullName, dob, gender, job)
-    else
-        print("Player not found.")
-    end
-end, false)
+            TriggerEvent("showid:display", playerId, fullName, dob, gender, job, driversLicense)
+        else
+            print("Player not found.")
+        end
+    end, false)
+end
 
 RegisterNetEvent("showid:display")
-AddEventHandler("showid:display", function(playerId, fullName, dob, gender, job)
+AddEventHandler("showid:display", function(playerId, fullName, dob, gender, job, driversLicense)
     print("showid:display event triggered for player ID: " .. tostring(playerId))
-
-    local imageUrl = "https://i.imgur.com/adrNj4A.png"  -- Replace with the actual URL
+    local imageUrl = "https://cdn.discordapp.com/attachments/1213681910899810364/1220174289941303447/25b693_e59a57ddc9d04e9187a2409f8af7c652.jpg?ex=660dfadc&is=65fb85dc&hm=e9a7dc0a96eb8792d316db2fdfbc9b3e258ca1a6544695fe075eda74a1ca2630&"  -- Replace with the actual URL
     local assignedTag = "[" .. "Dispatch" .. "]"
-
     local bubbleData = {
         { label = "Full Name: ", value = fullName },
         { label = "Date of Birth: ", value = dob },
         { label = "Gender: ", value = gender },
-        { label = "Job: ", value = job }
+        { label = "Job: ", value = job },
+        { label = "Drivers License: ", value = driversLicense }
     }
-
     local chatBubbles = {}
 
     for _, data in ipairs(bubbleData) do
@@ -44,11 +66,8 @@ function formatChatBubble(imageUrl, label, tag, value)
 end
 
 function sendChatBubbles(playerId, chatBubbles)
-    print("Sending nearby chat bubbles to all players")
-
     local posX, posY, posZ = table.unpack(GetEntityCoords(GetPlayerPed(playerId)))
-    local radius = 10.0
-
+    local radius = Config.CommandRadius or 10.0
     for _, targetPlayer in ipairs(GetPlayers()) do
         local targetPos = GetEntityCoords(GetPlayerPed(targetPlayer))
         local distance = #(vector3(posX, posY, posZ) - targetPos)
